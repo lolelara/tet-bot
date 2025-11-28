@@ -293,6 +293,7 @@ def get_json(context):
         return {}
 
 async def main(context):
+    print(f"DEBUG: Execution started. API_ID={API_ID}, API_HASH={API_HASH}")
     headers = {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
