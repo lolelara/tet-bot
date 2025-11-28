@@ -379,8 +379,16 @@ async def handle_send_code(context, headers):
         }, 500, headers)
     
     bot = TelegramBot()
-    phone_code_hash = await bot.send_code(phone)
-    return context.res.json({'status': 'success', 'phone_code_hash': phone_code_hash}, 200, headers)
+    try:
+        print(f"DEBUG: Attempting to send code to {phone}")
+        phone_code_hash = await bot.send_code(phone)
+        print(f"DEBUG: Code sent successfully. Hash: {phone_code_hash}")
+        return context.res.json({'status': 'success', 'phone_code_hash': phone_code_hash}, 200, headers)
+    except Exception as e:
+        print(f"ERROR in handle_send_code: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return context.res.json({'status': 'error', 'message': str(e)}, 500, headers)
 
 async def handle_verify_code(context, headers):
     data = get_json(context)
