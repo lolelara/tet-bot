@@ -61,64 +61,50 @@
         </div>
         <div id="step2" class="hidden">
             <input type="text" id="code" placeholder="Enter Code">
-            <button onclick="verifyCode()">Login</button>
-        </div>
-        <p id="error" style="color: red; font-size: 0.9em;"></p>
-    </div>
-
-    <script>
-        // REPLACE THIS WITH YOUR APPWRITE FUNCTION URL
-        const FUNCTION_URL = "https://6748267c003d16279f06.appwrite.global";
-
-        let phoneNum = '';
-        let phoneCodeHash = '';
-
-        async function sendCode() {
-            phoneNum = document.getElementById('phone').value;
             try {
-                const res = await fetch(`${FUNCTION_URL}/auth/send_code`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ phone: phoneNum })
-                });
-                const data = await res.json();
-                if (data.status === 'success') {
-                    phoneCodeHash = data.phone_code_hash;
-                    document.getElementById('step1').classList.add('hidden');
-                    document.getElementById('step2').classList.remove('hidden');
-                } else {
-                    document.getElementById('error').innerText = data.message || "Error sending code";
-                }
-            } catch (e) {
-                document.getElementById('error').innerText = "Network Error: " + e.message;
+            const res = await fetch(`${FUNCTION_URL}/auth/send_code`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone: phoneNum })
+            });
+            const data = await res.json();
+            if (data.status === 'success') {
+            phoneCodeHash = data.phone_code_hash;
+            document.getElementById('step1').classList.add('hidden');
+            document.getElementById('step2').classList.remove('hidden');
+            } else {
+            document.getElementById('error').innerText = data.message || "Error sending code";
             }
-        }
+            } catch (e) {
+            document.getElementById('error').innerText = "Network Error: " + e.message;
+            }
+            }
 
-        async function verifyCode() {
+            async function verifyCode() {
             const code = document.getElementById('code').value;
             try {
-                const res = await fetch(`${FUNCTION_URL}/auth/verify_code`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        phone: phoneNum,
-                        code: code,
-                        phone_code_hash: phoneCodeHash
-                    })
-                });
-                const data = await res.json();
-                if (data.status === 'success') {
-                    localStorage.setItem('session_string', data.session_string);
-                    localStorage.setItem('user_phone', data.phone);
-                    window.location.href = '/dashboard.html';
-                } else {
-                    document.getElementById('error').innerText = data.message || "Invalid code";
-                }
-            } catch (e) {
-                document.getElementById('error').innerText = "Network Error: " + e.message;
+            const res = await fetch(`${FUNCTION_URL}/auth/verify_code`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+            phone: phoneNum,
+            code: code,
+            phone_code_hash: phoneCodeHash
+            })
+            });
+            const data = await res.json();
+            if (data.status === 'success') {
+            localStorage.setItem('session_string', data.session_string);
+            localStorage.setItem('user_phone', data.phone);
+            window.location.href = '/dashboard.html';
+            } else {
+            document.getElementById('error').innerText = data.message || "Invalid code";
             }
-        }
-    </script>
+            } catch (e) {
+            document.getElementById('error').innerText = "Network Error: " + e.message;
+            }
+            }
+            </script>
 </body>
 
 </html>
