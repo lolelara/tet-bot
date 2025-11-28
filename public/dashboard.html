@@ -113,104 +113,119 @@
             <button onclick="createSchedule()">Create Schedule</button>
         </div>
 
+        <div class="schedule-list">
+            <h2>Your Schedules</h2>
+            <div id="schedulesContainer">Loading...</div>
+        </div>
+    </div>
+
+    <script>
+        // REPLACE THIS WITH YOUR APPWRITE FUNCTION URL
+        const FUNCTION_URL = "https://69295e810025abd60d05.fra.appwrite.run";
+
+        const sessionString = localStorage.getItem('session_string');
+        const userPhone = localStorage.getItem('user_phone');
+
+        if (!sessionString) {
+            window.location.href = '/index.html';
         }
 
         document.getElementById('welcomeMsg').innerText = `Welcome, ${userPhone}`;
 
         async function loadGroups() {
-        try {
-        const res = await fetch(`${FUNCTION_URL}/groups`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session_string: sessionString })
-        });
-        const data = await res.json();
-        const container = document.getElementById('groupsList');
-        container.innerHTML = '';
+            try {
+                const res = await fetch(`${FUNCTION_URL}/groups`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_string: sessionString })
+                });
+                const data = await res.json();
+                const container = document.getElementById('groupsList');
+                container.innerHTML = '';
 
-        if (data.status === 'success') {
-        data.groups.forEach(group => {
-        const div = document.createElement('div');
-        div.className = 'group-item';
-        div.innerHTML = `
-        <input type="checkbox" value="${group.id}" class="group-check">
-        <span>${group.title}</span>
-        `;
-        container.appendChild(div);
-        });
-        } else {
-        container.innerText = 'Failed to load groups.';
-        }
-        } catch (e) {
-        console.error(e);
-        }
+                if (data.status === 'success') {
+                    data.groups.forEach(group => {
+                        const div = document.createElement('div');
+                        div.className = 'group-item';
+                        div.innerHTML = `
+                            <input type="checkbox" value="${group.id}" class="group-check">
+                            <span>${group.title}</span>
+                        `;
+                        container.appendChild(div);
+                    });
+                } else {
+                    container.innerText = 'Failed to load groups.';
+                }
+            } catch (e) {
+                console.error(e);
+            }
         }
 
         async function loadSchedules() {
-        try {
-        const res = await fetch(`${FUNCTION_URL}/schedules`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_phone: userPhone })
-        });
-        const data = await res.json();
-        const container = document.getElementById('schedulesContainer');
-        container.innerHTML = '';
+            try {
+                const res = await fetch(`${FUNCTION_URL}/schedules`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_phone: userPhone })
+                });
+                const data = await res.json();
+                const container = document.getElementById('schedulesContainer');
+                container.innerHTML = '';
 
-        if (data.status === 'success') {
-        data.schedules.forEach(schedule => {
-        const div = document.createElement('div');
-        div.className = 'schedule-item';
-        div.innerHTML = `
-        <strong>Message:</strong> ${schedule.message}<br>
-        <strong>Interval:</strong> ${schedule.interval_minutes} mins<br>
-        <strong>Groups:</strong> ${schedule.groups ? schedule.groups.length : 0} selected
-        `;
-        container.appendChild(div);
-        });
-        }
-        } catch (e) {
-        console.error(e);
-        }
+                if (data.status === 'success') {
+                    data.schedules.forEach(schedule => {
+                        const div = document.createElement('div');
+                        div.className = 'schedule-item';
+                        div.innerHTML = `
+                            <strong>Message:</strong> ${schedule.message}<br>
+                            <strong>Interval:</strong> ${schedule.interval_minutes} mins<br>
+                            <strong>Groups:</strong> ${schedule.groups ? schedule.groups.length : 0} selected
+                        `;
+                        container.appendChild(div);
+                    });
+                }
+            } catch (e) {
+                console.error(e);
+            }
         }
 
         async function createSchedule() {
-        const message = document.getElementById('message').value;
-        const interval = document.getElementById('interval').value;
-        const checkboxes = document.querySelectorAll('.group-check:checked');
-        const groups = Array.from(checkboxes).map(cb => parseInt(cb.value));
+            const message = document.getElementById('message').value;
+            const interval = document.getElementById('interval').value;
+            const checkboxes = document.querySelectorAll('.group-check:checked');
+            const groups = Array.from(checkboxes).map(cb => parseInt(cb.value));
 
-        if (!message || groups.length === 0) {
-        alert('Please enter a message and select at least one group.');
-        return;
-        }
+            if (!message || groups.length === 0) {
+                alert('Please enter a message and select at least one group.');
+                return;
+            }
 
-        const res = await fetch(`${FUNCTION_URL}/schedule`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-        user_phone: userPhone,
-        message: message,
-        groups: groups,
-        interval: interval
-        })
-        });
+            const res = await fetch(`${FUNCTION_URL}/schedule`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_phone: userPhone,
+                    message: message,
+                    groups: groups,
+                    interval: interval
+                })
+            });
 
-        if (res.ok) {
-        window.location.reload();
-        } else {
-        alert('Failed to create schedule');
-        }
+            if (res.ok) {
+                window.location.reload();
+            } else {
+                alert('Failed to create schedule');
+            }
         }
 
         function logout() {
-        localStorage.clear();
-        window.location.href = '/index.html';
+            localStorage.clear();
+            window.location.href = '/index.html';
         }
 
         loadGroups();
         loadSchedules();
-        </script>
+    </script>
 </body>
 
 </html>
