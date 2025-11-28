@@ -398,16 +398,27 @@ async def handle_send_code(context, headers):
         return context.res.json({'status': 'error', 'message': str(e)}, 500, headers)
 
 async def handle_verify_code(context, headers):
-    data = get_json(context)
-    phone = data.get('phone')
-    code = data.get('code')
-    phone_code_hash = data.get('phone_code_hash')
-    
-    bot = TelegramBot()
-    session_string = await bot.verify_code(phone, phone_code_hash, code)
-    db.save_user(phone, session_string)
-    
-    return context.res.json({'status': 'success', 'session_string': session_string, 'phone': phone}, 200, headers)
+    print("DEBUG: handle_verify_code called")
+    try:
+        data = get_json(context)
+        phone = data.get('phone')
+        code = data.get('code')
+        phone_code_hash = data.get('phone_code_hash')
+        
+        print(f"DEBUG: Verifying code for {phone} with hash {phone_code_hash}")
+        
+        bot = TelegramBot()
+        session_string = await bot.verify_code(phone, phone_code_hash, code)
+        
+        print("DEBUG: Code verified, saving user...")
+        db.save_user(phone, session_string)
+        
+        return context.res.json({'status': 'success', 'session_string': session_string, 'phone': phone}, 200, headers)
+    except Exception as e:
+        print(f"ERROR in handle_verify_code: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return context.res.json({'status': 'error', 'message': str(e)}, 500, headers)
 
 async def handle_get_groups(context, headers):
     data = get_json(context)
