@@ -16,7 +16,8 @@ SCHEDULES_COLLECTION_ID = os.environ.get("SCHEDULES_COLLECTION_ID", "schedules")
 
 class LocalDatabase:
     def __init__(self):
-        self.file = 'db.json'
+        # Use /tmp for Appwrite Function environment (read-only root)
+        self.file = '/tmp/db.json'
         self._load()
 
     def _load(self):
