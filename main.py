@@ -295,8 +295,10 @@ else:
 
 def get_json(context):
     try:
+        print(f"DEBUG: Raw Body: {context.req.body}") # Debug log
         return json.loads(context.req.body)
-    except:
+    except Exception as e:
+        print(f"DEBUG: JSON Parse Error: {e}")
         return {}
 
 async def main(context):
