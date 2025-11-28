@@ -132,6 +132,25 @@
 
         document.getElementById('welcomeMsg').innerText = `Welcome, ${userPhone}`;
 
+        async function checkAdmin() {
+            try {
+                const res = await fetch(`${FUNCTION_URL}/admin/stats`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_phone: userPhone })
+                });
+                if (res.ok) {
+                    const header = document.querySelector('.header');
+                    const adminLink = document.createElement('a');
+                    adminLink.href = '/admin.html';
+                    adminLink.innerText = 'Admin Panel | ';
+                    adminLink.style.marginRight = '10px';
+                    header.insertBefore(adminLink, header.lastElementChild);
+                }
+            } catch (e) { }
+        }
+        checkAdmin();
+
         async function loadGroups() {
             try {
                 const res = await fetch(`${FUNCTION_URL}/groups`, {
