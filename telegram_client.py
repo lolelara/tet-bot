@@ -16,9 +16,9 @@ class TelegramBot:
     async def connect(self):
         if not self.session_string:
             # For initial login, we use memory session
-            self.client = Client(":memory:", api_id=API_ID, api_hash=API_HASH)
+            self.client = Client(":memory:", api_id=API_ID, api_hash=API_HASH, in_memory=True)
         else:
-            self.client = Client("user_session", session_string=self.session_string, api_id=API_ID, api_hash=API_HASH)
+            self.client = Client("user_session", session_string=self.session_string, api_id=API_ID, api_hash=API_HASH, in_memory=True)
         
         await self.client.connect()
 
@@ -36,6 +36,7 @@ class TelegramBot:
             raise e
 
     async def verify_code(self, phone_number: str, phone_code_hash: str, code: str):
+        await self.connect()
         try:
             await self.client.sign_in(phone_number, phone_code_hash, code)
             session_string = await self.client.export_session_string()
