@@ -1,16 +1,17 @@
-from telegram_client import TelegramBot
 import json
 import asyncio
 import os
 import time
 from typing import List, Dict, Optional
 from dotenv import load_dotenv
+from pyrogram import Client
+from pyrogram.errors import SessionPasswordNeeded, PhoneCodeInvalid, PasswordHashInvalid
 
 load_dotenv()
 
-# --- Database Logic (Embedded to avoid Import Errors) ---
-
-# Env vars for Appwrite
+# --- Environment Variables ---
+API_ID = os.environ.get("API_ID")
+API_HASH = os.environ.get("API_HASH")
 APPWRITE_ENDPOINT = os.environ.get("APPWRITE_ENDPOINT")
 APPWRITE_PROJECT_ID = os.environ.get("APPWRITE_PROJECT_ID")
 APPWRITE_API_KEY = os.environ.get("APPWRITE_API_KEY")
@@ -18,9 +19,71 @@ DATABASE_ID = os.environ.get("DATABASE_ID", "telegram_bot_db")
 USERS_COLLECTION_ID = os.environ.get("USERS_COLLECTION_ID", "users")
 SCHEDULES_COLLECTION_ID = os.environ.get("SCHEDULES_COLLECTION_ID", "schedules")
 
+# --- Telegram Client (Embedded) ---
+
+class TelegramBot:
+    def __init__(self, session_string: str = None):
+        self.session_string = session_string
+        self.client = None
+
+    async def connect(self):
+        if not self.session_string:
+            self.client = Client(":memory:", api_id=API_ID, api_hash=API_HASH, in_memory=True)
+        else:
+            self.client = Client("user_session", session_string=self.session_string, api_id=API_ID, api_hash=API_HASH, in_memory=True)
+        
+        await self.client.connect()
+
+    async def disconnect(self):
+        if self.client:
+            await self.client.disconnect()
+
+    async def send_code(self, phone_number: str):
+        await self.connect()
+        try:
+            sent_code = await self.client.send_code(phone_number)
+            return sent_code.phone_code_hash
+        except Exception as e:
+            await self.disconnect()
+            raise e
+
+    async def verify_code(self, phone_number: str, phone_code_hash: str, code: str):
+        await self.connect()
+        try:
+            await self.client.sign_in(phone_number, phone_code_hash, code)
+            session_string = await self.client.export_session_string()
+            await self.disconnect()
+            return session_string
+        except SessionPasswordNeeded:
+            await self.disconnect()
+            raise Exception("2FA_REQUIRED")
+        except Exception as e:
+            await self.disconnect()
+            raise e
+
+    async def get_groups(self) -> List[Dict]:
+        await self.connect()
+        groups = []
+        async for dialog in self.client.get_dialogs():
+            if dialog.chat.type.value in ["group", "supergroup"]:
+                groups.append({
+                    "id": dialog.chat.id,
+                    "title": dialog.chat.title
+                })
+        await self.disconnect()
+        return groups
+
+    async def send_message(self, chat_id: int, text: str):
+        await self.connect()
+        try:
+            await self.client.send_message(chat_id, text)
+        finally:
+            await self.disconnect()
+
+# --- Database Logic (Embedded) ---
+
 class LocalDatabase:
     def __init__(self):
-        # Use /tmp for Appwrite Function environment (read-only root)
         self.file = '/tmp/db.json'
         self._load()
 
@@ -46,7 +109,6 @@ class LocalDatabase:
         user = self.get_user(phone)
         if user:
             user["session_string"] = session_string
-            # user["role"] = role # Keep existing role
         else:
             self.data["users"].append({
                 "phone": phone,
@@ -220,18 +282,15 @@ if os.environ.get("APPWRITE_ENDPOINT"):
 else:
     db = LocalDatabase()
 
-# --- End Database Logic ---
+# --- Main Function Logic ---
 
-# Helper to parse request body
 def get_json(context):
     try:
         return json.loads(context.req.body)
     except:
         return {}
 
-# Appwrite Function Entry Point
 def main(context):
-    # Enable CORS
     headers = {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
@@ -247,39 +306,22 @@ def main(context):
     print(f"Request: {method} {path}")
 
     try:
-        # 1. CRON Job (Scheduler)
         if path == '/cron' or path == '/':
             return asyncio.run(run_scheduler(context, headers))
-
-        # 2. Auth: Send Code
         if path == '/auth/send_code' and method == 'POST':
             return asyncio.run(handle_send_code(context, headers))
-
-        # 3. Auth: Verify Code
         if path == '/auth/verify_code' and method == 'POST':
             return asyncio.run(handle_verify_code(context, headers))
-
-        # 4. Get Groups
         if path == '/groups' and method == 'POST':
             return asyncio.run(handle_get_groups(context, headers))
-
-        # 5. Create Schedule
         if path == '/schedule' and method == 'POST':
             return handle_create_schedule(context, headers)
-
-        # 6. Get Schedules
         if path == '/schedules' and method == 'POST':
             return handle_get_schedules(context, headers)
-
-        # 7. Admin: Get Users
         if path == '/admin/users' and method == 'POST':
             return handle_admin_get_users(context, headers)
-
-        # 8. Admin: Update User Status
         if path == '/admin/user_status' and method == 'POST':
             return handle_admin_update_status(context, headers)
-
-        # 9. Admin: Stats
         if path == '/admin/stats' and method == 'POST':
             return handle_admin_stats(context, headers)
 
@@ -309,7 +351,7 @@ async def run_scheduler(context, headers):
             except Exception as e:
                 results.append(f"Failed {chat_id}: {e}")
         
-        db.update_last_run(schedule['$id']) # Use $id for Appwrite doc ID
+        db.update_last_run(schedule['$id'])
 
     return context.res.json({'status': 'success', 'results': results}, 200, headers)
 
@@ -328,8 +370,6 @@ async def handle_verify_code(context, headers):
     
     bot = TelegramBot()
     session_string = await bot.verify_code(phone, phone_code_hash, code)
-    
-    # Save user to DB
     db.save_user(phone, session_string)
     
     return context.res.json({'status': 'success', 'session_string': session_string, 'phone': phone}, 200, headers)
@@ -373,7 +413,7 @@ def handle_admin_get_users(context, headers):
 
 def handle_admin_update_status(context, headers):
     data = get_json(context)
-    user_phone = data.get('user_phone') # Admin's phone
+    user_phone = data.get('user_phone')
     target_phone = data.get('target_phone')
     is_active = data.get('is_active')
     
