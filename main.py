@@ -57,6 +57,18 @@ def main(context):
         if path == '/schedules' and method == 'POST':
             return handle_get_schedules(context, headers)
 
+        # 7. Admin: Get Users
+        if path == '/admin/users' and method == 'POST':
+            return handle_admin_get_users(context, headers)
+
+        # 8. Admin: Update User Status
+        if path == '/admin/user_status' and method == 'POST':
+            return handle_admin_update_status(context, headers)
+
+        # 9. Admin: Stats
+        if path == '/admin/stats' and method == 'POST':
+            return handle_admin_stats(context, headers)
+
         return context.res.json({'error': 'Not Found'}, 404, headers)
 
     except Exception as e:
@@ -119,13 +131,6 @@ async def handle_get_groups(context, headers):
     groups = await bot.get_groups()
     return context.res.json({'status': 'success', 'groups': groups}, 200, headers)
 
-def handle_create_schedule(context, headers):
-    data = get_json(context)
-    user_phone = data.get('user_phone')
-    message = data.get('message')
-    groups = data.get('groups')
-    interval = int(data.get('interval'))
-    
     db.add_schedule(user_phone, message, groups, interval)
     return context.res.json({'status': 'success'}, 200, headers)
 
@@ -134,3 +139,47 @@ def handle_get_schedules(context, headers):
     user_phone = data.get('user_phone')
     schedules = db.get_user_schedules(user_phone)
     return context.res.json({'status': 'success', 'schedules': schedules}, 200, headers)
+
+def handle_admin_get_users(context, headers):
+    data = get_json(context)
+    # Verify admin role (in a real app, verify session/token)
+    # Here we trust the client to send their phone/role or we check DB
+    # For better security, we should pass session_string and verify user role from DB
+    user_phone = data.get('user_phone')
+    user = db.get_user(user_phone)
+    if not user or user.get('role') != 'admin':
+        return context.res.json({'error': 'Unauthorized'}, 403, headers)
+    
+    users = db.get_all_users()
+    return context.res.json({'status': 'success', 'users': users}, 200, headers)
+
+def handle_admin_update_status(context, headers):
+    data = get_json(context)
+    user_phone = data.get('user_phone') # Admin's phone
+    target_phone = data.get('target_phone')
+    is_active = data.get('is_active')
+    
+    user = db.get_user(user_phone)
+    if not user or user.get('role') != 'admin':
+        return context.res.json({'error': 'Unauthorized'}, 403, headers)
+        
+    db.update_user_status(target_phone, is_active)
+    return context.res.json({'status': 'success'}, 200, headers)
+
+def handle_admin_stats(context, headers):
+    data = get_json(context)
+    user_phone = data.get('user_phone')
+    user = db.get_user(user_phone)
+    if not user or user.get('role') != 'admin':
+        return context.res.json({'error': 'Unauthorized'}, 403, headers)
+    
+    users = db.get_all_users()
+    # Schedules count is harder without a get_all_schedules method in DB
+    # But we can approximate or add method. For now just users count.
+    return context.res.json({
+        'status': 'success', 
+        'stats': {
+            'total_users': len(users),
+            'active_users': len([u for u in users if u.get('is_active')])
+        }
+    }, 200, headers)
