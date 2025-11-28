@@ -10,9 +10,16 @@ from pyrogram.errors import SessionPasswordNeeded, PhoneCodeInvalid, PasswordHas
 load_dotenv()
 
 # --- Environment Variables ---
-# Hardcoded for immediate fix
-API_ID = 20478929
-API_HASH = "c93a3888764032d56214371404095454"
+# --- Environment Variables ---
+API_ID_RAW = os.environ.get("API_ID")
+try:
+    API_ID = int(API_ID_RAW) if API_ID_RAW else None
+except ValueError:
+    print(f"Error: API_ID is not an integer: {API_ID_RAW}")
+    API_ID = None
+
+API_HASH = os.environ.get("API_HASH")
+print(f"DEBUG: API_ID={API_ID}, API_HASH={API_HASH}") # Debug log
 print(f"DEBUG: API_ID={API_ID}, API_HASH={API_HASH}") # Debug log
 APPWRITE_ENDPOINT = os.environ.get("APPWRITE_ENDPOINT")
 APPWRITE_PROJECT_ID = os.environ.get("APPWRITE_PROJECT_ID")
