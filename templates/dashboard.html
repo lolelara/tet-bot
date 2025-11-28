@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 20px;
+            background-color: #f0f2f5;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input,
+        textarea,
+        select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #0088cc;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .schedule-list {
+            margin-top: 30px;
+        }
+
+        .schedule-item {
+            background: #f9f9f9;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .groups-container {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+        }
+
+        .group-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .group-item input {
+            width: auto;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Welcome, {{ user.phone }}</h1>
+            <div>
+                {% if user.role == 'admin' %}
+                <a href="/admin">Admin Panel</a> |
+                {% endif %}
+                <a href="/logout" style="color: red;">Logout</a>
+            </div>
+        </div>
+
+        <div class="new-schedule">
+            <h2>Create New Schedule</h2>
+            <div class="form-group">
+                <label>Message</label>
+                <textarea id="message" rows="3" placeholder="Enter your message..."></textarea>
+            </div>
+            <div class="form-group">
+                <label>Select Groups</label>
+                <div id="groupsList" class="groups-container">
+                    Loading groups...
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Interval (Minutes)</label>
+                <input type="number" id="interval" value="10" min="1">
+            </div>
+            <button onclick="createSchedule()">Create Schedule</button>
+        </div>
+
+        <div class="schedule-list">
+            <h2>Your Schedules</h2>
+            {% for schedule in schedules %}
+            <div class="schedule-item">
+                <strong>Message:</strong> {{ schedule.message }}<br>
+                <strong>Interval:</strong> {{ schedule.interval_minutes }} mins<br>
+                <strong>Groups:</strong> {{ schedule.groups | length }} selected
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <script>
+        async function loadGroups() {
+            const res = await fetch('/api/groups');
+            const data = await res.json();
+            const container = document.getElementById('groupsList');
+            container.innerHTML = '';
+
+            if (data.status === 'success') {
+                data.groups.forEach(group => {
+                    const div = document.createElement('div');
+                    div.className = 'group-item';
+                    div.innerHTML = `
+                        <input type="checkbox" value="${group.id}" class="group-check">
+                        <span>${group.title}</span>
+                    `;
+                    container.appendChild(div);
+                });
+            } else {
+                container.innerText = 'Failed to load groups.';
+            }
+        }
+
+        async function createSchedule() {
+            const message = document.getElementById('message').value;
+            const interval = document.getElementById('interval').value;
+            const checkboxes = document.querySelectorAll('.group-check:checked');
+            const groups = Array.from(checkboxes).map(cb => parseInt(cb.value));
+
+            if (!message || groups.length === 0) {
+                alert('Please enter a message and select at least one group.');
+                return;
+            }
+
+            const res = await fetch('/api/schedule', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message: message,
+                    groups: groups,
+                    interval: interval
+                })
+            });
+
+            if (res.ok) {
+                window.location.reload();
+            } else {
+                alert('Failed to create schedule');
+            }
+        }
+
+        loadGroups();
+    </script>
+</body>
+
+</html>

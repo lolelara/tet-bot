@@ -1,0 +1,5 @@
+flask
+pyrogram
+tgcrypto
+python-dotenv
+appwrite
