@@ -3,4 +3,4 @@ pyrogram
 tgcrypto
 python-dotenv
 appwrite
-appwrite
+# Force Rebuild 2
