@@ -290,7 +290,7 @@ def get_json(context):
     except:
         return {}
 
-def main(context):
+async def main(context):
     headers = {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
@@ -307,13 +307,13 @@ def main(context):
 
     try:
         if path == '/cron' or path == '/':
-            return asyncio.run(run_scheduler(context, headers))
+            return await run_scheduler(context, headers)
         if path == '/auth/send_code' and method == 'POST':
-            return asyncio.run(handle_send_code(context, headers))
+            return await handle_send_code(context, headers)
         if path == '/auth/verify_code' and method == 'POST':
-            return asyncio.run(handle_verify_code(context, headers))
+            return await handle_verify_code(context, headers)
         if path == '/groups' and method == 'POST':
-            return asyncio.run(handle_get_groups(context, headers))
+            return await handle_get_groups(context, headers)
         if path == '/schedule' and method == 'POST':
             return handle_create_schedule(context, headers)
         if path == '/schedules' and method == 'POST':
