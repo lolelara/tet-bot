@@ -54,19 +54,6 @@ def setup():
             print(f"Error checking users collection: {e}")
 
     # 3. Create Schedules Collection
-    try:
-        databases.get_collection(DATABASE_ID, SCHEDULES_COLLECTION_ID)
-        print(f"Collection '{SCHEDULES_COLLECTION_ID}' already exists.")
-    except AppwriteException as e:
-        if e.code == 404:
-            print(f"Creating collection '{SCHEDULES_COLLECTION_ID}'...")
-            databases.create_collection(DATABASE_ID, SCHEDULES_COLLECTION_ID, SCHEDULES_COLLECTION_ID)
-            
-            # Create Attributes
-            print("Creating attributes for schedules...")
-            databases.create_string_attribute(DATABASE_ID, SCHEDULES_COLLECTION_ID, "user_phone", 20, True)
-            databases.create_string_attribute(DATABASE_ID, SCHEDULES_COLLECTION_ID, "message", 5000, True)
-            # Storing groups as a list of integers is tricky in Appwrite if not using relationships.
             # We can use a string array or just a stringified JSON.
             # Appwrite supports Integer attributes, and array=True.
             databases.create_integer_attribute(DATABASE_ID, SCHEDULES_COLLECTION_ID, "groups", True) 

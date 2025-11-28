@@ -1,4 +1,4 @@
-from database import db
+from db_helper import db
 from telegram_client import TelegramBot
 import json
 import asyncio

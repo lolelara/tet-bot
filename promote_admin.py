@@ -1,4 +1,4 @@
-from database import db
+from db_helper import db
 import sys
 
 def promote(phone):
