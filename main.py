@@ -11,8 +11,9 @@ load_dotenv()
 
 # --- Environment Variables ---
 # Hardcoded for immediate fix
-API_ID = "20478929"
+API_ID = 20478929
 API_HASH = "c93a3888764032d56214371404095454"
+print(f"DEBUG: API_ID={API_ID}, API_HASH={API_HASH}") # Debug log
 APPWRITE_ENDPOINT = os.environ.get("APPWRITE_ENDPOINT")
 APPWRITE_PROJECT_ID = os.environ.get("APPWRITE_PROJECT_ID")
 APPWRITE_API_KEY = os.environ.get("APPWRITE_API_KEY")
@@ -357,14 +358,16 @@ async def run_scheduler(context, headers):
     return context.res.json({'status': 'success', 'results': results}, 200, headers)
 
 async def handle_send_code(context, headers):
+    print(f"DEBUG: handle_send_code called. API_ID={API_ID}, API_HASH={API_HASH}")
     data = get_json(context)
     phone = data.get('phone')
     
     # Validate environment variables
     if not API_ID or not API_HASH:
+        print("DEBUG: Credentials missing!")
         return context.res.json({
             'status': 'error', 
-            'message': 'API_ID or API_HASH not configured in environment variables'
+            'message': 'API_ID or API_HASH not configured'
         }, 500, headers)
     
     bot = TelegramBot()
