@@ -358,6 +358,14 @@ async def run_scheduler(context, headers):
 async def handle_send_code(context, headers):
     data = get_json(context)
     phone = data.get('phone')
+    
+    # Validate environment variables
+    if not API_ID or not API_HASH:
+        return context.res.json({
+            'status': 'error', 
+            'message': 'API_ID or API_HASH not configured in environment variables'
+        }, 500, headers)
+    
     bot = TelegramBot()
     phone_code_hash = await bot.send_code(phone)
     return context.res.json({'status': 'success', 'phone_code_hash': phone_code_hash}, 200, headers)
