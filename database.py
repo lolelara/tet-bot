@@ -2,6 +2,9 @@ import json
 import os
 import time
 from typing import List, Dict, Optional
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Env vars for Appwrite
 APPWRITE_ENDPOINT = os.environ.get("APPWRITE_ENDPOINT")
