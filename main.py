@@ -51,7 +51,9 @@ class TelegramBot:
         await self.connect()
         try:
             sent_code = await self.client.send_code(phone_number)
-            return sent_code.phone_code_hash
+            phone_code_hash = sent_code.phone_code_hash
+            await self.disconnect()
+            return phone_code_hash
         except Exception as e:
             await self.disconnect()
             raise e
