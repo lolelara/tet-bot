@@ -78,11 +78,32 @@ class TelegramBot:
         # Use the session name from send_code to maintain session continuity
         if session_name:
             self.session_name = session_name
+            # Check if session file exists
+            import os
+            workdir = "/tmp/pyrogram_sessions"
+            session_file = f"{workdir}/{session_name}.session"
+            print(f"DEBUG: Looking for session file: {session_file}")
+            print(f"DEBUG: Session file exists: {os.path.exists(session_file)}")
+            if os.path.exists(session_file):
+                print(f"DEBUG: Session file size: {os.path.getsize(session_file)} bytes")
+                print(f"DEBUG: Files in workdir: {os.listdir(workdir) if os.path.exists(workdir) else 'workdir does not exist'}")
+        
         await self.connect()
         try:
+            print(f"DEBUG: About to call sign_in with phone={phone_number}, hash={phone_code_hash}, code={code}")
             await self.client.sign_in(phone_number, phone_code_hash, code)
             session_string = await self.client.export_session_string()
             await self.disconnect()
+            
+            # Clean up the temp session file after successful login
+            if session_name:
+                import os
+                workdir = "/tmp/pyrogram_sessions"
+                session_file = f"{workdir}/{session_name}.session"
+                if os.path.exists(session_file):
+                    os.remove(session_file)
+                    print(f"DEBUG: Cleaned up session file: {session_file}")
+            
             return session_string
         except SessionPasswordNeeded:
             await self.disconnect()
