@@ -52,13 +52,18 @@ class TelegramBot:
         try:
             sent_code = await self.client.send_code(phone_number)
             phone_code_hash = sent_code.phone_code_hash
+            # Export session string to maintain session continuity
+            partial_session = await self.client.export_session_string()
             await self.disconnect()
-            return phone_code_hash
+            return phone_code_hash, partial_session
         except Exception as e:
             await self.disconnect()
             raise e
 
-    async def verify_code(self, phone_number: str, phone_code_hash: str, code: str):
+    async def verify_code(self, phone_number: str, phone_code_hash: str, code: str, partial_session: str = None):
+        # Use the partial session from send_code to maintain session continuity
+        if partial_session:
+            self.session_string = partial_session
         await self.connect()
         try:
             await self.client.sign_in(phone_number, phone_code_hash, code)
@@ -390,9 +395,13 @@ async def handle_send_code(context, headers):
     bot = TelegramBot()
     try:
         print(f"DEBUG: Attempting to send code to {phone}")
-        phone_code_hash = await bot.send_code(phone)
+        phone_code_hash, partial_session = await bot.send_code(phone)
         print(f"DEBUG: Code sent successfully. Hash: {phone_code_hash}")
-        return context.res.json({'status': 'success', 'phone_code_hash': phone_code_hash}, 200, headers)
+        return context.res.json({
+            'status': 'success', 
+            'phone_code_hash': phone_code_hash,
+            'partial_session': partial_session
+        }, 200, headers)
     except Exception as e:
         print(f"ERROR in handle_send_code: {str(e)}")
         import traceback
@@ -406,11 +415,13 @@ async def handle_verify_code(context, headers):
         phone = data.get('phone')
         code = data.get('code')
         phone_code_hash = data.get('phone_code_hash')
+        partial_session = data.get('partial_session')
         
         print(f"DEBUG: Verifying code for {phone} with hash {phone_code_hash}")
+        print(f"DEBUG: Partial session present: {bool(partial_session)}")
         
         bot = TelegramBot()
-        session_string = await bot.verify_code(phone, phone_code_hash, code)
+        session_string = await bot.verify_code(phone, phone_code_hash, code, partial_session)
         
         print("DEBUG: Code verified, saving user...")
         db.save_user(phone, session_string)
