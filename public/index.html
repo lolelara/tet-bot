@@ -46,6 +46,11 @@
             background-color: #0077b5;
         }
 
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
         .hidden {
             display: none;
         }
@@ -74,6 +79,10 @@
         let phoneCodeHash = '';
 
         async function sendCode() {
+            const sendBtn = document.querySelector('button[onclick="sendCode()"]');
+            sendBtn.disabled = true;
+            sendBtn.innerText = "Sending...";
+
             phoneNum = document.getElementById('phone').value;
             try {
                 const res = await fetch(`${FUNCTION_URL}/auth/send_code`, {
@@ -88,9 +97,13 @@
                     document.getElementById('step2').classList.remove('hidden');
                 } else {
                     document.getElementById('error').innerText = data.message || "Error sending code";
+                    sendBtn.disabled = false;
+                    sendBtn.innerText = "Send Code";
                 }
             } catch (e) {
                 document.getElementById('error').innerText = "Network Error: " + e.message;
+                sendBtn.disabled = false;
+                sendBtn.innerText = "Send Code";
             }
         }
 
