@@ -1,18 +1,57 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Telegram Bot Login</title>
     <style>
-        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #f0f2f5; }
-        .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); width: 300px; }
-        input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
-        button { width: 100%; padding: 10px; background-color: #0088cc; color: white; border: none; border-radius: 4px; cursor: pointer; }
-        button:hover { background-color: #0077b5; }
-        .hidden { display: none; }
+        body {
+            font-family: sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f2f5;
+        }
+
+        .card {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            width: 300px;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #0088cc;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0077b5;
+        }
+
+        .hidden {
+            display: none;
+        }
     </style>
 </head>
+
 <body>
     <div class="card">
         <h2>Login</h2>
@@ -29,16 +68,18 @@
 
     <script>
         let phoneNum = '';
+        let phoneCodeHash = '';
 
         async function sendCode() {
             phoneNum = document.getElementById('phone').value;
             const res = await fetch('/api/send_code', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({phone: phoneNum})
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone: phoneNum })
             });
             const data = await res.json();
             if (data.status === 'success') {
+                phoneCodeHash = data.phone_code_hash;
                 document.getElementById('step1').classList.add('hidden');
                 document.getElementById('step2').classList.remove('hidden');
             } else {
@@ -50,8 +91,12 @@
             const code = document.getElementById('code').value;
             const res = await fetch('/api/verify_code', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({phone: phoneNum, code: code})
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    phone: phoneNum,
+                    code: code,
+                    phone_code_hash: phoneCodeHash
+                })
             });
             const data = await res.json();
             if (data.status === 'success') {
@@ -62,4 +107,5 @@
         }
     </script>
 </body>
+
 </html>

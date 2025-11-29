@@ -96,6 +96,12 @@
 
         async function verifyCode() {
             const code = document.getElementById('code').value;
+
+            if (!phoneCodeHash) {
+                document.getElementById('error').innerText = "Session expired. Please reload and try again.";
+                return;
+            }
+
             try {
                 const res = await fetch(`${FUNCTION_URL}/auth/verify_code`, {
                     method: 'POST',

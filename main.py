@@ -5,7 +5,7 @@ import time
 from typing import List, Dict, Optional
 from dotenv import load_dotenv
 from pyrogram import Client
-from pyrogram.errors import SessionPasswordNeeded, PhoneCodeInvalid, PasswordHashInvalid
+from pyrogram.errors import SessionPasswordNeeded, PhoneCodeInvalid, PasswordHashInvalid, PhoneCodeExpired
 
 load_dotenv()
 
@@ -414,6 +414,12 @@ async def handle_verify_code(context, headers):
         db.save_user(phone, session_string)
         
         return context.res.json({'status': 'success', 'session_string': session_string, 'phone': phone}, 200, headers)
+    except (PhoneCodeInvalid, PhoneCodeExpired) as e:
+        print(f"DEBUG: Invalid code: {e}")
+        return context.res.json({'status': 'error', 'message': 'Invalid code'}, 400, headers)
+    except SessionPasswordNeeded:
+        print("DEBUG: 2FA Required")
+        return context.res.json({'status': 'error', 'message': '2FA Required (Not supported)'}, 400, headers)
     except Exception as e:
         print(f"ERROR in handle_verify_code: {str(e)}")
         import traceback
