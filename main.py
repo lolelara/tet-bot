@@ -414,7 +414,10 @@ async def handle_verify_code(context, headers):
         db.save_user(phone, session_string)
         
         return context.res.json({'status': 'success', 'session_string': session_string, 'phone': phone}, 200, headers)
-    except (PhoneCodeInvalid, PhoneCodeExpired) as e:
+    except PhoneCodeExpired:
+        print("DEBUG: Code Expired")
+        return context.res.json({'status': 'error', 'message': 'Code expired. Please request a new one.'}, 400, headers)
+    except PhoneCodeInvalid as e:
         print(f"DEBUG: Invalid code: {e}")
         return context.res.json({'status': 'error', 'message': 'Invalid code'}, 400, headers)
     except SessionPasswordNeeded:
