@@ -69,149 +69,78 @@
             <button onclick="verifyCode()">Login</button>
         </div>
         <p id="error" style="color: red; font-size: 0.9em;"></p>
-        <!DOCTYPE html>
-        <html lang="en">
+    </div>
 
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Telegram Bot Login</title>
-            <style>
-                body {
-                    font-family: sans-serif;
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    height: 100vh;
-                    background-color: #f0f2f5;
+    <script>
+        // REPLACE THIS WITH YOUR APPWRITE FUNCTION URL
+        const FUNCTION_URL = "https://69295e810025abd60d05.fra.appwrite.run";
+
+        let phoneNum = '';
+        let phoneCodeHash = '';
+        let partialSession = '';
+
+        async function sendCode() {
+            const sendBtn = document.querySelector('button[onclick="sendCode()"]');
+            sendBtn.disabled = true;
+            sendBtn.innerText = "Sending...";
+
+            phoneNum = document.getElementById('phone').value;
+            try {
+                const res = await fetch(`${FUNCTION_URL}/auth/send_code`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone: phoneNum })
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    phoneCodeHash = data.phone_code_hash;
+                    partialSession = data.partial_session;
+                    document.getElementById('step1').classList.add('hidden');
+                    document.getElementById('step2').classList.remove('hidden');
+                } else {
+                    document.getElementById('error').innerText = data.message || "Error sending code";
+                    sendBtn.disabled = false;
+                    sendBtn.innerText = "Send Code";
                 }
+            } catch (e) {
+                document.getElementById('error').innerText = "Network Error: " + e.message;
+                sendBtn.disabled = false;
+                sendBtn.innerText = "Send Code";
+            }
+        }
 
-                .card {
-                    background: white;
-                    padding: 2rem;
-                    border-radius: 8px;
-                    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-                    width: 300px;
+        async function verifyCode() {
+            const code = document.getElementById('code').value;
+
+            if (!phoneCodeHash) {
+                document.getElementById('error').innerText = "Session expired. Please reload and try again.";
+                return;
+            }
+
+            try {
+                const res = await fetch(`${FUNCTION_URL}/auth/verify_code`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        phone: phoneNum,
+                        code: code,
+                        phone_code_hash: phoneCodeHash,
+                        partial_session: partialSession
+                    })
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    localStorage.setItem('session_string', data.session_string);
+                    localStorage.setItem('user_phone', data.phone);
+                    window.location.href = '/dashboard.html';
+                } else {
+                    document.getElementById('error').innerText = data.message || "Invalid code";
                 }
+            } catch (e) {
+                document.getElementById('error').innerText = "Network Error: " + e.message;
+            }
+        }
+    </script>
+</body>
 
-                input {
-                    width: 100%;
-                    padding: 10px;
-                    margin: 10px 0;
-                    border: 1px solid #ddd;
-                    border-radius: 4px;
-                    box-sizing: border-box;
-                }
-
-                button {
-                    width: 100%;
-                    padding: 10px;
-                    background-color: #0088cc;
-                    color: white;
-                    border: none;
-                    border-radius: 4px;
-                    cursor: pointer;
-                }
-
-                button:hover {
-                    background-color: #0077b5;
-                }
-
-                button:disabled {
-                    background-color: #ccc;
-                    cursor: not-allowed;
-                }
-
-                .hidden {
-                    display: none;
-                }
-            </style>
-        </head>
-
-        <body>
-            <div class="card">
-                <h2>Login</h2>
-                <div id="step1">
-                    <input type="text" id="phone" placeholder="Phone Number (e.g., +201xxxx)">
-                    <button onclick="sendCode()">Send Code</button>
-                </div>
-                <div id="step2" class="hidden">
-                    <input type="text" id="code" placeholder="Enter Code">
-                    <button onclick="verifyCode()">Login</button>
-                </div>
-                <p id="error" style="color: red; font-size: 0.9em;"></p>
-            </div>
-
-            <script>
-                // REPLACE THIS WITH YOUR APPWRITE FUNCTION URL
-                const FUNCTION_URL = "https://69295e810025abd60d05.fra.appwrite.run";
-
-                let phoneNum = '';
-                let phoneCodeHash = '';
-                let partialSession = '';
-
-                async function sendCode() {
-                    const sendBtn = document.querySelector('button[onclick="sendCode()"]');
-                    sendBtn.disabled = true;
-                    sendBtn.innerText = "Sending...";
-
-                    phoneNum = document.getElementById('phone').value;
-                    try {
-                        const res = await fetch(`${FUNCTION_URL}/auth/send_code`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ phone: phoneNum })
-                        });
-                        const data = await res.json();
-                        if (data.status === 'success') {
-                            phoneCodeHash = data.phone_code_hash;
-                            partialSession = data.partial_session;
-                            document.getElementById('step1').classList.add('hidden');
-                            document.getElementById('step2').classList.remove('hidden');
-                        } else {
-                            document.getElementById('error').innerText = data.message || "Error sending code";
-                            sendBtn.disabled = false;
-                            sendBtn.innerText = "Send Code";
-                        }
-                    } catch (e) {
-                        document.getElementById('error').innerText = "Network Error: " + e.message;
-                        sendBtn.disabled = false;
-                        sendBtn.innerText = "Send Code";
-                    }
-                }
-
-                async function verifyCode() {
-                    const code = document.getElementById('code').value;
-
-                    if (!phoneCodeHash) {
-                        document.getElementById('error').innerText = "Session expired. Please reload and try again.";
-                        return;
-                    }
-
-                    try {
-                        const res = await fetch(`${FUNCTION_URL}/auth/verify_code`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                phone: phoneNum,
-                                code: code,
-                                phone_code_hash: phoneCodeHash,
-                                partial_session: partialSession
-                            })
-                        });
-                        const data = await res.json();
-                        if (data.status === 'success') {
-                            localStorage.setItem('session_string', data.session_string);
-                            localStorage.setItem('user_phone', data.phone);
-                            window.location.href = '/dashboard.html';
-                        } else {
-                            document.getElementById('error').innerText = data.message || "Invalid code";
-                        }
-                    } catch (e) {
-                        document.getElementById('error').innerText = "Network Error: " + e.message;
-                    }
-                }
-            </script>
-        </body>
-
-        </html>
+</html>
