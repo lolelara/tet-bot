@@ -31,9 +31,8 @@ SCHEDULES_COLLECTION_ID = os.environ.get("SCHEDULES_COLLECTION_ID", "schedules")
 # --- Telegram Client (Embedded) ---
 
 class TelegramBot:
-    def __init__(self, session_string: str = None, session_name: str = None):
+    def __init__(self, session_string: str = None):
         self.session_string = session_string
-        self.session_name = session_name
         self.client = None
 
     async def connect(self):
@@ -42,16 +41,8 @@ class TelegramBot:
             raise ValueError(f"API_ID and API_HASH must be set. Current values: API_ID={API_ID}, API_HASH={API_HASH}")
         
         if self.session_string:
-            # Authenticated user session
             self.client = Client("user_session", session_string=self.session_string, api_id=API_ID, api_hash=API_HASH, in_memory=True)
-        elif self.session_name:
-            # Login flow - use file-based session in /tmp to maintain state
-            import os
-            workdir = "/tmp/pyrogram_sessions"
-            os.makedirs(workdir, exist_ok=True)
-            self.client = Client(self.session_name, api_id=API_ID, api_hash=API_HASH, workdir=workdir)
         else:
-            # Fallback
             self.client = Client(":memory:", api_id=API_ID, api_hash=API_HASH, in_memory=True)
         
         await self.client.connect()
@@ -61,49 +52,29 @@ class TelegramBot:
             await self.client.disconnect()
 
     async def send_code(self, phone_number: str):
-        # Use phone number as session name to maintain state
-        session_name = f"login_{phone_number.replace('+', '')}"
-        self.session_name = session_name
         await self.connect()
         try:
             sent_code = await self.client.send_code(phone_number)
             phone_code_hash = sent_code.phone_code_hash
+            # Export session string to maintain session continuity
+            partial_session = await self.client.export_session_string()
+            print(f"DEBUG: Exported partial session string length: {len(partial_session)}")
             await self.disconnect()
-            return phone_code_hash, session_name
+            return phone_code_hash, partial_session
         except Exception as e:
             await self.disconnect()
             raise e
 
-    async def verify_code(self, phone_number: str, phone_code_hash: str, code: str, session_name: str = None):
-        # Use the session name from send_code to maintain session continuity
-        if session_name:
-            self.session_name = session_name
-            # Check if session file exists
-            import os
-            workdir = "/tmp/pyrogram_sessions"
-            session_file = f"{workdir}/{session_name}.session"
-            print(f"DEBUG: Looking for session file: {session_file}")
-            print(f"DEBUG: Session file exists: {os.path.exists(session_file)}")
-            if os.path.exists(session_file):
-                print(f"DEBUG: Session file size: {os.path.getsize(session_file)} bytes")
-                print(f"DEBUG: Files in workdir: {os.listdir(workdir) if os.path.exists(workdir) else 'workdir does not exist'}")
-        
+    async def verify_code(self, phone_number: str, phone_code_hash: str, code: str, partial_session: str = None):
+        # Use the partial session from send_code to maintain session continuity
+        if partial_session:
+            self.session_string = partial_session
+            
         await self.connect()
         try:
-            print(f"DEBUG: About to call sign_in with phone={phone_number}, hash={phone_code_hash}, code={code}")
             await self.client.sign_in(phone_number, phone_code_hash, code)
             session_string = await self.client.export_session_string()
             await self.disconnect()
-            
-            # Clean up the temp session file after successful login
-            if session_name:
-                import os
-                workdir = "/tmp/pyrogram_sessions"
-                session_file = f"{workdir}/{session_name}.session"
-                if os.path.exists(session_file):
-                    os.remove(session_file)
-                    print(f"DEBUG: Cleaned up session file: {session_file}")
-            
             return session_string
         except SessionPasswordNeeded:
             await self.disconnect()
@@ -430,12 +401,12 @@ async def handle_send_code(context, headers):
     bot = TelegramBot()
     try:
         print(f"DEBUG: Attempting to send code to {phone}")
-        phone_code_hash, session_name = await bot.send_code(phone)
-        print(f"DEBUG: Code sent successfully. Hash: {phone_code_hash}, Session: {session_name}")
+        phone_code_hash, partial_session = await bot.send_code(phone)
+        print(f"DEBUG: Code sent successfully. Hash: {phone_code_hash}")
         return context.res.json({
             'status': 'success', 
             'phone_code_hash': phone_code_hash,
-            'session_name': session_name
+            'partial_session': partial_session
         }, 200, headers)
     except Exception as e:
         print(f"ERROR in handle_send_code: {str(e)}")
@@ -450,13 +421,13 @@ async def handle_verify_code(context, headers):
         phone = data.get('phone')
         code = data.get('code')
         phone_code_hash = data.get('phone_code_hash')
-        session_name = data.get('session_name')
+        partial_session = data.get('partial_session')
         
         print(f"DEBUG: Verifying code for {phone} with hash {phone_code_hash}")
-        print(f"DEBUG: Session name: {session_name}")
+        print(f"DEBUG: Partial session present: {bool(partial_session)}")
         
         bot = TelegramBot()
-        session_string = await bot.verify_code(phone, phone_code_hash, code, session_name)
+        session_string = await bot.verify_code(phone, phone_code_hash, code, partial_session)
         
         print("DEBUG: Code verified, saving user...")
         db.save_user(phone, session_string)
