@@ -77,7 +77,7 @@
 
         let phoneNum = '';
         let phoneCodeHash = '';
-        let partialSession = '';
+        let sessionName = '';
 
         async function sendCode() {
             const sendBtn = document.querySelector('button[onclick="sendCode()"]');
@@ -94,7 +94,7 @@
                 const data = await res.json();
                 if (data.status === 'success') {
                     phoneCodeHash = data.phone_code_hash;
-                    partialSession = data.partial_session;
+                    sessionName = data.session_name;
                     document.getElementById('step1').classList.add('hidden');
                     document.getElementById('step2').classList.remove('hidden');
                 } else {
@@ -125,7 +125,7 @@
                         phone: phoneNum,
                         code: code,
                         phone_code_hash: phoneCodeHash,
-                        partial_session: partialSession
+                        session_name: sessionName
                     })
                 });
                 const data = await res.json();
